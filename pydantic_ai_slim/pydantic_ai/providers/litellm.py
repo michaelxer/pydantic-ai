@@ -79,8 +79,15 @@ class LiteLLMProvider(Provider[AsyncOpenAI]):
             profile = openai_model_profile(model_name)
 
         # As LiteLLMProvider is used with OpenAIModel, which uses OpenAIJsonSchemaTransformer,
-        # we maintain that behavior
-        return OpenAIModelProfile(json_schema_transformer=OpenAIJsonSchemaTransformer).update(profile)
+        # we maintain that behavior. We default to openai_chat_supports_multiple_system_messages=False
+        # because LiteLLM is often used with non-OpenAI backends (vLLM, etc.) that reject multiple
+        # leading system messages with "System message must be at the beginning." Users targeting
+        # actual OpenAI or backends that do support multiple system messages can override this via
+        # the `profile` parameter on the model.
+        return OpenAIModelProfile(
+            json_schema_transformer=OpenAIJsonSchemaTransformer,
+            openai_chat_supports_multiple_system_messages=False,
+        ).update(profile)
 
     @overload
     def __init__(

@@ -157,3 +157,25 @@ async def test_init_with_http_client_overrides_cached():
         # Verify the provider was created successfully with custom client
         assert isinstance(provider.client, AsyncOpenAI)
         assert provider.client.api_key == 'test-key'
+
+
+def test_model_profile_defaults_multiple_system_messages_false(mocker: MockerFixture):
+    """LiteLLMProvider should default openai_chat_supports_multiple_system_messages=False.
+
+    Non-OpenAI backends (vLLM, etc.) reject multiple leading system messages,
+    so the safe default for LiteLLM is False.
+    """
+    provider = LiteLLMProvider(api_key='test-key')
+
+    from dataclasses import dataclass
+
+    @dataclass
+    class MockProfile:
+        max_tokens: int = 4096
+        supports_streaming: bool = True
+
+    mocker.patch('pydantic_ai.providers.litellm.openai_model_profile', return_value=MockProfile())
+
+    profile = provider.model_profile('gpt-3.5-turbo')
+    assert isinstance(profile, OpenAIModelProfile)
+    assert profile.openai_chat_supports_multiple_system_messages is False
